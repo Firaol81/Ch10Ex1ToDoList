@@ -13,12 +13,7 @@ namespace ToDoList.Controllers
 
         public IActionResult Index(string id)
         {
-            // load current filters and data needed for filter drop downs in ViewBag
             var filters = new Filters(id);
-            ViewBag.Filters = filters;
-            ViewBag.Categories = context.Categories.ToList();
-            ViewBag.Statuses = context.Statuses.ToList();
-            ViewBag.DueFilters = Filters.DueFilterValues;
 
             // get ToDo objects from database based on current filters
             IQueryable<ToDo> query = context.ToDos
