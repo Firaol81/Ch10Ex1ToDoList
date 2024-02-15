@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ToDoList.Models;
-
+//Author: Firaol Baneta
+//Date: 2/15/2024
 namespace ToDoList.Controllers
 {
     public class HomeController : Controller
@@ -15,17 +17,37 @@ namespace ToDoList.Controllers
         {
             var filters = new Filters(id);
 
-            // get ToDo objects from database based on current filters
+            var viewModel = new ToDoViewModel
+            {
+                Filters = filters,
+                Categories = context.Categories.ToList(),
+                Statuss = context.Statuses.ToList(),
+                DueFilters = Filters.DueFilterValues,
+                Tasks = GetFilteredTasks(filters)  // Make sure GetFilteredTasks returns List<ToDo>
+            };
+
+            return View(viewModel);
+        }
+
+        private List<ToDo> GetFilteredTasks(Filters filters)
+        {
             IQueryable<ToDo> query = context.ToDos
                 .Include(t => t.Category).Include(t => t.Status);
-            if (filters.HasCategory) {
+
+            if (filters.HasCategory)
+            {
                 query = query.Where(t => t.CategoryId == filters.CategoryId);
             }
-            if (filters.HasStatus) {
+
+            if (filters.HasStatus)
+            {
                 query = query.Where(t => t.StatusId == filters.StatusId);
             }
-            if (filters.HasDue) {
+
+            if (filters.HasDue)
+            {
                 var today = DateTime.Today;
+
                 if (filters.IsPast)
                     query = query.Where(t => t.DueDate < today);
                 else if (filters.IsFuture)
@@ -33,33 +55,42 @@ namespace ToDoList.Controllers
                 else if (filters.IsToday)
                     query = query.Where(t => t.DueDate == today);
             }
-            var tasks = query.OrderBy(t => t.DueDate).ToList();
-            return View(tasks);
+
+            return query.OrderBy(t => t.DueDate).ToList();
         }
 
+
+        [HttpGet]
         public IActionResult Add()
         {
-            ViewBag.Categories = context.Categories.ToList();
-            ViewBag.Statuses = context.Statuses.ToList();
-            return View();
+            var viewModel = new ToDoViewModel
+            {
+                Categories = context.Categories.ToList(),
+                Statuss = context.Statuses.ToList()
+            };
+
+            return View(viewModel);
         }
 
         [HttpPost]
-        public IActionResult Add(ToDo task)
+        public IActionResult Add(ToDoViewModel model)
         {
             if (ModelState.IsValid)
             {
-                context.ToDos.Add(task);
+                context.ToDos.Add(model.CurrentTask);
                 context.SaveChanges();
                 return RedirectToAction("Index");
             }
             else
             {
-                ViewBag.Categories = context.Categories.ToList();
-                ViewBag.Statuses = context.Statuses.ToList();
-                return View(task);
+                model.Categories = context.Categories.ToList();
+                model.Statuss = context.Statuses.ToList();
+                model.DueFilters = Filters.DueFilterValues; // Assuming DueFilters is needed
+                return View(model);
             }
         }
+
+
 
         [HttpPost]
         public IActionResult Filter(string[] filter)
